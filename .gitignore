@@ -1,6 +1,14 @@
+# etc files
+sanity_check.ipynb
+
+# model checkpoint
+save/
+
+# tensorboard logdir
+runs/
+
 # video data
-VGGSound/train*
-VGGSound/test*
+VGGSound/raw
 
 # vscode settings
 .vscode
