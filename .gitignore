@@ -1,5 +1,5 @@
 # etc files
-sanity_check.ipynb
+sanity_check_*.ipynb
 
 # model checkpoint
 save/

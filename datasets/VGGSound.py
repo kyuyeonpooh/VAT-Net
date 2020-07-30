@@ -41,7 +41,7 @@ class VGGSound(Dataset):
                 transforms.Normalize(mean=[.485, .456, .406], std=[.229, .224, .225])
             ])
         else:
-            image_transforms = transformsCompose([
+            image_transforms = transforms.Compose([
                 transforms.CenterCrop(224),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[.485, .456, .406], std=[.229, .224, .225])
