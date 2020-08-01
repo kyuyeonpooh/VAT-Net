@@ -17,11 +17,11 @@ class VGGSound(Dataset):
         else:
             raise ValueError("Unknown type of dataset mode: {}".format(mode))
 
-        data_dir = os.path.join("D:/", "VGGSound", "proc", mode)
+        data_dir = os.path.join("../ssd/VGGSound/proc", mode)
         self.img_dir = os.path.join(data_dir, "image")
         self.aud_dir = os.path.join(data_dir, "audio")
-        self.img_list = os.listdir(self.img_dir)
-        self.aud_list = os.listdir(self.aud_dir)
+        self.img_list = sorted(os.listdir(self.img_dir))
+        self.aud_list = sorted(os.listdir(self.aud_dir))
         assert len(self.img_list) == len(self.aud_list)
         self.length = len(self.img_list)
         img_id_list = self.img_list
@@ -127,7 +127,7 @@ class VGGSound(Dataset):
 
 if __name__ == "__main__":
     vggsound = VGGSound(mode="train")
-    dataloader = DataLoader(vggsound, batch_size=128, shuffle=True, num_workers=6)
+    dataloader = DataLoader(vggsound, batch_size=128, shuffle=True)
     for n, (img, aud, label) in enumerate(dataloader):
         print(img.shape, aud.shape, label.shape)
         if n == 9:
