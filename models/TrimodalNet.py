@@ -11,21 +11,21 @@ class TrimodalNet(nn.Module):
 
         self.visnet = VisualNet.VisualNet()  # (B, 512)
         self.vis_head = nn.Sequential(
-            nn.Linear(512, 256),  # (B, 256)
-            nn.BatchNorm1d(256),
+            nn.Linear(2048, 512),  # (B, 512)
+            nn.BatchNorm1d(512),
             nn.ReLU(inplace=True),
-            nn.Linear(256, 256),  # (B, 256)
-            nn.BatchNorm1d(256)
+            nn.Linear(512, 512),  # (B, 512)
+            nn.BatchNorm1d(512)
         )
 
         self.audnet = AudioNet.AudioNet()
         self.aud_head = nn.Sequential(
-            nn.Linear(512, 256)
+            nn.Linear(2048, 512)
         )
 
-        self.fc1_va = nn.Linear(256, 128)
+        self.fc1_va = nn.Linear(512, 512)
         self.relu_va = nn.ReLU(inplace=True)
-        self.fc2_va = nn.Linear(128, 1)
+        self.fc2_va = nn.Linear(512, 1)
         self.sigmoid_va = nn.Sigmoid()
 
         self.apply(self.init_bn)
