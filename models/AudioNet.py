@@ -14,12 +14,12 @@ class AudioNet(nn.Module):
         conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
         nn.init.kaiming_normal_(conv1.weight, mode="fan_out", nonlinearity="relu")
         
-        self.resnet18 = models.resnet18(pretrained=False)
-        self.resnet18.conv1 = conv1  # Change first conv layer's in_channel to 1
-        self.resnet18.fc = nn.Identity()  # Discard last fc layer
+        self.resnet50 = models.resnet50(pretrained=False)
+        self.resnet50.conv1 = conv1  # Change first conv layer's in_channel to 1
+        self.resnet50.fc = nn.Identity()  # Discard last fc layer
 
     def forward(self, x):
-        return self.resnet18(x)  # [B, 512]
+        return self.resnet50(x)  # (B, 2048)
 
 """
 class AudioNet(nn.Module):
