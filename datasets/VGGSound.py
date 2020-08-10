@@ -1,13 +1,33 @@
+import csv
 import os
 import random
 
-import numpy as np
 import librosa
-from PIL import Image
-
+import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader
+from PIL import Image
+from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
+
+from config import config
+
+vggsound_csv = config.vggsound.download.csv
+src_dir = config.vggsound.extract.dest_dir
+
+
+def get_ytid_to_class_map():
+    ytid_to_class = dict()
+    with open(vggsound_csv) as csvfile:
+        reader = csv.DictReader(csvfile, fieldnames=["ytid", "start", "label", "split"], skipinitialspace=True)
+        for row in reader:
+            if row["ytid"] == "#":
+                continue
+            ytid_to_class[row["ytid"]] = row["label"]
+    return ytid_to_class
+
+
+def get_ytid(filename):
+    return filename.split(".")[0]
 
 
 class VGGSound(Dataset):
@@ -17,16 +37,19 @@ class VGGSound(Dataset):
         else:
             raise ValueError("Unknown type of dataset mode: {}".format(mode))
 
-        data_dir = os.path.join("../ssd/VGGSound/proc", mode)
+        data_dir = os.path.join(src_dir, mode)
         self.img_dir = os.path.join(data_dir, "image")
         self.aud_dir = os.path.join(data_dir, "audio")
+
         self.img_list = sorted(os.listdir(self.img_dir))
         self.aud_list = sorted(os.listdir(self.aud_dir))
         assert len(self.img_list) == len(self.aud_list)
         self.length = len(self.img_list)
+
         img_id_list = self.img_list
-        aud_id_list = [self.remove_ext(aud_file) for aud_file in self.aud_list]
+        aud_id_list = [aud_file.rsplit(".", 1)[0] for aud_file in self.aud_list]
         assert set(img_id_list) == set(aud_id_list)
+        self.ytid_to_class = get_ytid_to_class_map()
 
         self.image_transforms = self._get_image_transforms()
         self.audio_transforms = self._get_audio_transforms()
@@ -55,11 +78,8 @@ class VGGSound(Dataset):
         ])
         return audio_transforms
 
-    def remove_ext(self, filename):
-        return filename.rsplit(".", 1)[0]
-
     def __len__(self):
-        return self.length * 2
+        return self.length
     
     def __getitem__(self, i):
         """ With given video, a random timestamp is selected.
@@ -78,58 +98,33 @@ class VGGSound(Dataset):
         To generate negative pair, random audio interval from different video
         is chosen for given video frame.
         """
-        # Positive correspondence
-        if i < self.length:
-            if self.mode == "train":
-                t = random.randrange(2, 9)
-            else:
-                t = 9 // 2
-            img_file = "{}.{:02d}.jpg".format(self.img_list[i], t)
-            interval = (t - 0.5 - 1.5, t - 0.5 + 1.5)
-            img_path = os.path.join(self.img_dir, self.img_list[i], img_file)
-            aud_path = os.path.join(self.aud_dir, self.aud_list[i])
-            label = 1.
-        
-        # Negative correspondence
+        # Pick single random frame with corresponding audio
+        if self.mode == "train":
+            t = random.randint(2, 8)
         else:
-            i -= self.length
-            if self.mode == "train":
-                t = random.randrange(2, 9)
-                rand_t = random.randrange(2, 9)
-            else:
-                t = 9 // 2
-                rand_t = 9 // 2
-            while True:
-                rand_i = random.randrange(0, self.length)
-                if self.img_list[i].split(".")[0] != self.aud_list[rand_i].split(".")[0]:
-                    break
-            img_file = "{}.{:02d}.jpg".format(self.img_list[i], t)
-            interval = (rand_t - 0.5 - 1.5, rand_t - 0.5 + 1.5)
-            img_path = os.path.join(self.img_dir, self.img_list[i], img_file)
-            aud_path = os.path.join(self.aud_dir, self.aud_list[rand_i])
-            label = 0.
+            t = 9 // 2
+        img_file = "{}.{:02d}.jpg".format(self.img_list[i], t)
+        aud_file = self.aud_list[i]
+        img_path = os.path.join(self.img_dir, self.img_list[i], img_file)
+        aud_path = os.path.join(self.aud_dir, self.aud_list[i])
 
         # Get image
         img = Image.open(img_path)
         img = self.image_transforms(img)
 
-        # Get 3-second audio
+        # Get corresponding log mel-spectrogram of 3-second audio
         y, sr = librosa.load(aud_path, sr=44100)
+        interval = (t - 0.5 - 1.5, t - 0.5 + 1.5)
         y = y[sr * int(interval[0]) : sr * int(interval[1])]
         aud = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=1024, win_length=882, hop_length=441, n_mels=128)
         aud = librosa.amplitude_to_db(aud, ref=np.max)
         aud = self.audio_transforms(aud)
         if aud.shape != (1, 128, 301):
-            print(self.aud_list[i] if self.mode == "train" else self.aud_list[rand_i])
+            raise RuntimeError("Unexpected shape of spectrogram made from" + aud_file)
 
-        return img, aud, torch.tensor(label)
+        # Get class of given sample
+        ytid = get_ytid(img_file)
+        assert ytid == get_ytid(aud_file)
+        class_ = self.ytid_to_class[ytid]
 
-
-if __name__ == "__main__":
-    vggsound = VGGSound(mode="train")
-    dataloader = DataLoader(vggsound, batch_size=128, shuffle=True)
-    for n, (img, aud, label) in enumerate(dataloader):
-        print(img.shape, aud.shape, label.shape)
-        if n == 9:
-            break
-    
+        return img, aud, class_

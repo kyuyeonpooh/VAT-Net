@@ -1,3 +1,4 @@
+import argparse
 import os
 import random
 import shutil
@@ -6,14 +7,22 @@ from functools import partial
 from itertools import product
 from multiprocessing import Pool
 
-data_dir = "/mnt/d/VGGSound/raw"        # Directory where videos are saved
-dest_dir = "/mnt/d/VGGSound/proc"       # Directory where processed data will be saved
-fps = 1                 # FPS configuration for video frame extraction
-img_shape = (256, 256)  # Shape of output image
-audio_sr = 44100        # Sampling rate of audio (Hz)
-n_cpu = 8               # Number of processors to use
-seed = 2020             # Random seed used for generating validation set
-remove_fail = True      # Whether to immediately delete video failed on extraction
+from config import *
+
+
+data_dir = config.vggsound.extract.data_dir
+dest_dir = config.vggsound.extract.dest_dir
+fps = config.vggsound.extract.fps
+img_shape = config.vggsound.extract.img_shape
+audio_sr = config.vggsound.extract.audio_sr
+seed = config.vggsound.extract.seed
+remove_fail = config.vggsound.extract.remove_fail
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--ncpu", type=int, default=8,
+                    help="Number of processes to be forked for multi-processing")
+args = parser.parse_args()
+n_cpu = args.ncpu
 
 
 def train_val_split(train_list, val_size=0.1):

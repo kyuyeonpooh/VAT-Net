@@ -1,5 +1,6 @@
 # etc files
-sanity_check_*.ipynb
+.sanchk_*.ipynb
+.pylintrc
 
 # model checkpoint
 save/

@@ -5,16 +5,22 @@ import torchvision.models as models
 
 
 class VisualNet(nn.Module):
-    """ VisualNet is following ResNet18 architecture.
-    """
     def __init__(self):
-        super(VisualNet, self).__init__()
-        
-        self.resnet50 = models.resnet50(pretrained=False)
-        self.resnet50.fc = nn.Identity()  # Discard last fc layer
+        super(VisualNet, self).__init__()   
+
+        resnet18 = models.resnet18(pretrained=True)
+        self.resnet18 = nn.Sequential(*list(resnet18.children())[:-1])
+        self.fc_head = nn.Sequential(
+            nn.Linear(512, 256),
+            nn.ReLU(inplace=True),
+            nn.Linear(256, 256)
+        )
 
     def forward(self, x):
-        return self.resnet50(x)  # (B, 2024)
+        x = self.resnet18(x).squeeze()
+        x = self.fc_head(x)
+        x = F.normalize(x, p=2, dim=1)        
+        return x
 
 
 if __name__ == "__main__":
@@ -25,13 +31,13 @@ if __name__ == "__main__":
     # Forward passing test
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
-    x = torch.rand((128, 3, 224, 224)).to(device)
+    x = torch.rand((64, 3, 224, 224)).to(device)
     y = model(x)
     print("Output shape: {}".format(y.shape))
     print("Forward passing test succeeded.")
 
     # Backward propgation test
-    y_gt = torch.rand((128, 512)).to(device)
+    y_gt = torch.rand((64, 256)).to(device)
     loss = nn.MSELoss()(y, y_gt)
     loss.backward()
     print("Backward propagation test succeeded.")

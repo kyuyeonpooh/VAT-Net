@@ -1,3 +1,4 @@
+import argparse
 import csv
 import os
 import subprocess
@@ -5,12 +6,25 @@ import time
 
 import youtube_dl
 
-vggsound_csv = "VGGSound/vggsound.csv"  # VGGSound csv file path
-data_dir = "VGGSound/raw"               # Directory where videos will be saved
-timeout = 100       # Time limit for downloading video
-row_start = 0       # CSV file row start point (starts from 0)
-row_end = -1        # CSV file row end point (exclusive, max row if -1)
-delay = 2           # Delay between download (in second) to prevent IP ban
+from config import *
+
+vggsound_csv = config.vggsound.download.csv   # VGGSound csv file path
+data_dir = config.vggsound.download.data_dir  # Directory where videos will be saved
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--start", type=int, required=True,
+                    help="Video download start row of csv file (index starts from 0)")
+parser.add_argument("--end", type=int, required=True,
+                    help="Video download end row of csv file (exclusive, to the end of file if -1)")
+parser.add_argument("--timeout", type=int, default=100,
+                    help="Time limit (sec) for downloading video")
+parser.add_argument("--delay", type=int, default=2,
+                    help="Delay (sec) between download to prevent IP ban")
+args = parser.parse_args()
+timeout = args.timeout
+row_start = args.start
+row_end = args.end
+delay = args.delay
 
 
 def load_vggsound_csv():
