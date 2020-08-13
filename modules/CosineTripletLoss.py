@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class CosineTripletLoss(nn.Module):
-    def __init__(self, margin, loss_weight=1.):
+    def __init__(self, margin, loss_weight=1.0):
         super(CosineTripletLoss, self).__init__()
         self.margin = margin
         self.loss_weight = loss_weight
@@ -32,5 +32,5 @@ class CosineTripletLoss(nn.Module):
 if __name__ == "__main__":
     z_x = F.normalize(torch.randn(64, 256))
     z_y = F.normalize(torch.randn(64, 256))
-    criterion = CosineTripletLoss(margin=.5)
+    criterion = CosineTripletLoss(margin=0.2)
     loss = criterion(z_x, z_y)

@@ -56,11 +56,11 @@ else:
     raise RuntimeError("GPU is required")
 print("Current device:", device)
 
-batch_size = 256
+batch_size = 512
 num_workers = 16
-model_path = "../ssd/save/VA_B512_LR1e-03_D1e-07_M0.2_S1_linear_head/020.pt"
+model_path = "../ssd/save/VA_B512_LR1e-04_D1e-05_M0.2_scratch/021.pt"
 
-writer = SummaryWriter("../ssd/runs/bin/embedding-random")
+writer = SummaryWriter("../ssd/runs/bin/embedding-v2-021-scratch")
 
 vggsound_ = VGGSound(mode="test")
 vggsound_test = DataLoader(vggsound_, batch_size=batch_size, num_workers=num_workers, pin_memory=True)
@@ -71,7 +71,7 @@ def load_model():
     model = VANet()
     model = nn.DataParallel(model)
     model.to(device)
-    model.load_state_dict(load)
+    model.load_state_dict(load["weights"])
     return model
 
 def generate_embeddings():
@@ -101,10 +101,11 @@ def generate_embeddings():
 
 if __name__ == "__main__":
     img_embs, aud_embs, classes = generate_embeddings()
+    
     target_idx = [c in target_classes for c in classes]
     img_embs, aud_embs = img_embs[target_idx], aud_embs[target_idx]
     classes = list(compress(classes, target_idx))
-    """
+
     writer.add_embedding(img_embs, tag="embedding-img-target", metadata=classes)
     writer.add_embedding(aud_embs, tag="embedding-aud-target", metadata=classes)
     
@@ -112,6 +113,5 @@ if __name__ == "__main__":
     img_classes = [c + "(img)" for c in classes]
     aud_classes = [c + "(aud)" for c in classes]
     writer.add_embedding(global_embs, tag="embedding-all-target", metadata=img_classes + aud_classes)
-    """
     
-    torch.save({"img_emb": img_embs, "aud_emb": aud_embs, "class": classes}, "Emb_VA_B512_LR1e-03_D1e-07_M0.2_S1_linear.pt")
+    torch.save({"img_emb": img_embs, "aud_emb": aud_embs, "class": classes}, "emb.pt")

@@ -17,15 +17,15 @@ tensorboard_dir = config.train.tensorboard_dir
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model", type=str, required=True, choices=["VA", "VT", "VAT"])
-parser.add_argument("--epoch", type=int, default=80)
-parser.add_argument("--batch-size", type=int, default=256)
+parser.add_argument("--epoch", type=int, default=30)
+parser.add_argument("--batch-size", type=int, default=512)
 parser.add_argument("--learning-rate", type=float, default=1e-4)
 parser.add_argument("--weight-decay", type=float, default=1e-5)
 parser.add_argument("--margin", type=float, default=0.2,
                     help="Margin for triplet loss")
 parser.add_argument("--num-workers", type=int, default=16,
                     help="Number of processes to be forked for batch generation")
-parser.add_argument("--log-step", type=int, default=100,
+parser.add_argument("--log-step", type=int, default=50,
                     help="Logging period on tensorboard")
 parser.add_argument("--use-tensorboard", type=int, default=1, choices=[0, 1],
                     help="Whether to use tensorboard for logging")
@@ -46,7 +46,7 @@ log_step = args.log_step
 use_tensorboard = args.use_tensorboard
 use_scheduler = args.use_scheduler
 resume = args.resume
-train_name = "{}_B{}_LR{:.0e}_D{:.0e}_M{}".format(
+train_name = "{}_B{}_LR{:.0e}_D{:.0e}_M{}_scratch".format(
               model_name, batch_size, lr, weight_decay, margin)
 
 
@@ -80,16 +80,17 @@ def get_ckpt_weight(ckpt_dir_):
     if not os.path.exists(ckpt_dir_):
         print("Checkpoint not found")
         os.makedirs(ckpt_dir_)
-        return False, 0, None
+        return False, 0, None, None, None
     ckpt_list = sorted(os.listdir(ckpt_dir_))
     if len(ckpt_list) == 0:
         print("Checkpoint not found")
-        return False, 0, None
+        return False, 0, None, None, None
     model_path = os.path.join(ckpt_dir_, ckpt_list[-1])
     ckpt_bundle = torch.load(model_path)
     ckpt_epoch, ckpt_weights = ckpt_bundle["epoch"], ckpt_bundle["weights"]
-    print("Found checkpoint, starting from epoch", ckpt_epoch)
-    return True, ckpt_epoch, ckpt_weights
+    ckpt_opt, ckpt_sched = ckpt_bundle["optimizer"], ckpt_bundle["scheduler"]
+    print("Found checkpoint, starting from epoch", ckpt_epoch + 1)
+    return True, ckpt_epoch, ckpt_weights, ckpt_opt, ckpt_sched
 
 
 def get_data_loader(mode):
@@ -112,25 +113,27 @@ def train():
     model = nn.DataParallel(model)
     model.to(device)
     
+    # Starts from checkpoint if exists
+    ckpt_dir_ = os.path.join(ckpt_dir, train_name)
+    if resume:
+        success, ckpt_epoch, ckpt_weight, ckpt_opt, ckpt_sched = get_ckpt_weight(ckpt_dir_)
+        if success:
+            model.load_state_dict(ckpt_weight)
+        epoch_range = range(ckpt_epoch + 1, epochs + 1)
+    else:
+        if os.path.exists(ckpt_dir_):
+            print("Warning: checkpoint directory of current run already exists!")
+        os.makedirs(ckpt_dir_, exist_ok=True)
+        epoch_range = range(1, epochs + 1)
+    
     # Get optimizer and loss function
     optimizer = Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1) if use_scheduler else None
     criterion = CosineTripletLoss(margin=margin)
-
+    
     # Get tensorboard
-    global_step = 0
+    global_step = (log_step * 6) * (epoch_range[0] - 1)
     tensorboard = get_tensorboard() if use_tensorboard else None
-
-    # Starts from checkpoint if exists
-    ckpt_dir_ = os.path.join(ckpt_dir, train_name)
-    if resume:
-        success, ckpt_epoch, ckpt_weight = get_ckpt_weight(ckpt_dir_)
-        if success:
-            model.load_state_dict(ckpt_weight)
-        epoch_range = range(ckpt_epoch + 1, epochs + 1)
-    else:        
-        os.makedirs(ckpt_dir_, exist_ok=True)
-        epoch_range = range(1, epochs + 1)
 
     # Get data loader
     train_loader = get_data_loader("train")
@@ -164,7 +167,8 @@ def train():
         
         if scheduler is not None:
             scheduler.step()
-        torch.save({"epoch": epoch, "weights": model.state_dict()}, os.path.join(ckpt_dir_, "{:03d}.pt".format(epoch)))
+        torch.save({"epoch": epoch, "weights": model.state_dict(), "optimizer": optimizer, "scheduler": scheduler},
+                    os.path.join(ckpt_dir_, "{:03d}.pt".format(epoch)))
 
 
 def validate(model, criterion, val_loader, device):

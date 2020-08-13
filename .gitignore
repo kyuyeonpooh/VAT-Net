@@ -4,6 +4,7 @@
 
 # model checkpoint
 save/
+*.pt
 
 # tensorboard logdir
 runs/
