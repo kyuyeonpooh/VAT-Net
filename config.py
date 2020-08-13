@@ -27,6 +27,11 @@ config.vggsound.extract.audio_sr = 44100                   # Sampling rate of au
 config.vggsound.extract.seed = 2020                        # Random seed used for generating validation set
 config.vggsound.extract.remove_fail = True                 # Whether to immediately delete video failed on extraction
 
+""" Configuration of COCO2017 image and text extract source code.
+Files using this configurations: extract.py, datasets/VGGSound.py
+"""
+config.coco.data_dir = "../ssd/COCO2017"
+
 """ Configuration of model checkpoint and logging while training
 File using this configurations: train.py
 """
