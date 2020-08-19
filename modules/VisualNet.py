@@ -17,9 +17,11 @@ class VisualNet(nn.Module):
         )
 
     def forward(self, x):
-        x = self.resnet18(x).squeeze()
+        x = self.resnet18(x)
+        x = x.flatten(1)
         x = self.fc_head(x)
-        x = F.normalize(x, p=2, dim=1)        
+        x = F.normalize(x, p=2, dim=1)
+        
         return x
 
 

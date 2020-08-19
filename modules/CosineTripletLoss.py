@@ -18,7 +18,7 @@ class CosineTripletLoss(nn.Module):
         assert z_x.size() == z_y.size()
         batch_size = z_x.size(0)
 
-        sim_neg = torch.mm(z_x, z_y.T)  # B x B
+        sim_neg = torch.mm(z_x, z_y.T)  # (batch_size, batch_size)
         sim_pos = torch.diag(sim_neg).unsqueeze(1)
         
         loss_matrix = sim_neg - sim_pos + self.margin

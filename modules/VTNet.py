@@ -2,19 +2,19 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from modules.AudioNet import AudioNet
+from modules.TextNet import TextNet
 from modules.VisualNet import VisualNet
 
 
-class VANet(nn.Module):
+class VTNet(nn.Module):
     def __init__(self):
-        super(VANet, self).__init__()
+        super(VTNet, self).__init__()
         
         self.visual_net = VisualNet()
-        self.audio_net = AudioNet()
+        self.text_net = TextNet()
 
-    def forward(self, v, a):
+    def forward(self, v, t):
         z_v = self.visual_net(v)
-        z_a = self.audio_net(a)
+        z_t = self.text_net(t)
         
-        return z_v, z_a
+        return z_v, z_t

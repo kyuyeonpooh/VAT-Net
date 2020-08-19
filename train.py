@@ -8,12 +8,11 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from config import config
+from datasets.CocoFlickr import CocoFlickr
 from datasets.VGGSound import VGGSound
 from modules.VANet import VANet
+from modules.VTNet import VTNet
 from modules.CosineTripletLoss import CosineTripletLoss
-
-ckpt_dir = config.train.ckpt_dir
-tensorboard_dir = config.train.tensorboard_dir
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model", type=str, required=True, choices=["VA", "VT", "VAT"])
@@ -35,6 +34,8 @@ parser.add_argument("--resume", type=int, default=0, choices=[0, 1],
                     help="Whether to resume from the checkpoint if exists")
 args = parser.parse_args()
 
+ckpt_dir = config.train.ckpt_dir
+tensorboard_dir = config.train.tensorboard_dir
 model_name = args.model
 epochs = args.epoch
 batch_size = args.batch_size
@@ -46,7 +47,7 @@ log_step = args.log_step
 use_tensorboard = args.use_tensorboard
 use_scheduler = args.use_scheduler
 resume = args.resume
-train_name = "{}_B{}_LR{:.0e}_D{:.0e}_M{}_scratch".format(
+train_name = "{}_B{}_LR{:.0e}_D{:.0e}_M{}".format(
               model_name, batch_size, lr, weight_decay, margin)
 
 
@@ -62,6 +63,8 @@ def get_device():
 def get_model():
     if model_name == "VA":
         model = VANet()
+    elif model_name == "VT":
+        model = VTNet()
     else:
         raise ValueError("Error")
     return model
@@ -101,6 +104,11 @@ def get_data_loader(mode):
         drop_last = True if mode == "train" else False
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=drop_last,
                                 num_workers=num_workers, pin_memory=True)
+    elif model_name == "VT":
+        dataset = CocoFlickr(mode=mode)
+        drop_last = True if mode == "train" else False
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=drop_last,
+                                num_workers=num_workers, pin_memory=True)
     else:
         raise ValueError("Error")
     return dataloader
@@ -132,7 +140,8 @@ def train():
     criterion = CosineTripletLoss(margin=margin)
     
     # Get tensorboard
-    global_step = (log_step * 6) * (epoch_range[0] - 1)
+    # global_step = (log_step * 6) * (epoch_range[0] - 1)
+    global_step = 0
     tensorboard = get_tensorboard() if use_tensorboard else None
 
     # Get data loader
@@ -145,11 +154,11 @@ def train():
 
         model.train()
         train_loss = 0.
-        for i, (v, a, _) in enumerate(train_loader):
+        for i, (x, y, _) in enumerate(train_loader):
             optimizer.zero_grad()
-            v, a  = v.to(device), a.to(device)
-            z_v, z_a = model(v, a)
-            loss = criterion(z_v, z_a)
+            x, y  = x.to(device), y.to(device)
+            z_x, z_y = model(x, y)
+            loss = criterion(z_x, z_y)
             loss.backward()
             optimizer.step()
             train_loss += loss.item()
@@ -174,13 +183,14 @@ def train():
 def validate(model, criterion, val_loader, device):
     with torch.no_grad():
         val_loss = 0.
-        for v, a, _ in val_loader:
-            v, a = v.to(device), a.to(device)
-            z_v, z_a = model(v, a)
-            loss = criterion(z_v, z_a)
+        for x, y, _ in val_loader:
+            x, y = x.to(device), y.to(device)
+            z_x, z_y = model(x, y)
+            loss = criterion(z_x, z_y)
             val_loss += loss.item()
         val_loss /= len(val_loader)
     return val_loss
+
 
 def log_progress(tensorboard, train_loss, val_loss, global_step):    
     if tensorboard is not None:

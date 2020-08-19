@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-from config import *
+from config import config
 from datasets.VGGSound import VGGSound
 from modules.VANet import VANet
 

@@ -11,13 +11,10 @@ from torchvision import transforms
 
 from config import config
 
-vggsound_csv = config.vggsound.download.csv
-src_dir = config.vggsound.extract.dest_dir
-
 
 def get_ytid_to_class_map():
     ytid_to_class = dict()
-    with open(vggsound_csv) as csvfile:
+    with open(config.vggsound.download.csv) as csvfile:
         reader = csv.DictReader(csvfile, fieldnames=["ytid", "start", "label", "split"], skipinitialspace=True)
         for row in reader:
             if row["ytid"] == "#":
@@ -36,8 +33,8 @@ class VGGSound(Dataset):
             self.mode = mode
         else:
             raise ValueError("Unknown type of dataset mode: {}".format(mode))
-
-        data_dir = os.path.join(src_dir, mode)
+        
+        data_dir = os.path.join(config.vggsound.extract.dest_dir, mode)
         self.img_dir = os.path.join(data_dir, "image")
         self.aud_dir = os.path.join(data_dir, "audio")
 
