@@ -52,7 +52,7 @@ class CocoFlickr(Dataset):
         if self.mode == "train":
             image_transforms = transforms.Compose([
                 transforms.RandomHorizontalFlip(),
-                transforms.Resize(256),
+                transforms.Resize((256, 256)),
                 transforms.RandomCrop(224),
                 transforms.ColorJitter(brightness=0.1, saturation=0.1),
                 transforms.ToTensor(),
@@ -60,7 +60,7 @@ class CocoFlickr(Dataset):
             ])
         else:
             image_transforms = transforms.Compose([
-                transforms.Resize(256),
+                transforms.Resize((256, 256)),
                 transforms.CenterCrop(224),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[.485, .456, .406], std=[.229, .224, .225])
@@ -87,9 +87,10 @@ class CocoFlickr(Dataset):
         if self.mode == "train":
             j = random.randint(0, n_captions - 1)
         else:
-            j = (n_captions - 1) // 2
+            j = 0
         
         # Get caption
+        # if self.mode == "train":
         caption = self.annotations[i]["caption"][j]
         caption_words = self._tokenize(caption)
         caption_words = self._remove_stopwords(caption_words)
@@ -99,6 +100,23 @@ class CocoFlickr(Dataset):
             txt += [0] * (self.max_words - len(txt))
         txt = torch.LongTensor(txt)
         assert len(txt) == self.max_words
+        """
+        else:
+            caption = list()
+            txt = list()
+            for j in range(n_captions):
+                caption_ = self.annotations[i]["caption"][j]
+                caption.append(caption_)
+                caption_words = self._tokenize(caption_)
+                caption_words = self._remove_stopwords(caption_words)
+                txt_ = [self.vocabulary.get(word, 1) for word in caption_words]
+                txt_ = txt_[:self.max_words]
+                if len(txt_) < self.max_words:
+                    txt_ += [0] * (self.max_words - len(txt_))
+                assert len(txt_) == self.max_words
+                txt += txt_
+            txt = torch.LongTensor(txt)
+        """
 
         # Get image
         dataset = self.annotations[i]["dataset"]

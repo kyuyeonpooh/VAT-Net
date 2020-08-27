@@ -8,9 +8,11 @@ from config import config
 coco_train_dict = dict()
 coco_val_dict = dict()
 flickr_dict = dict()
+msrvtt_dict = dict()
 
 train_dict = dict()
 val_dict = dict()
+test_dict = dict()
 
 
 # COCO 2017 Captioning Dataset (Train)
@@ -21,7 +23,7 @@ annotations = coco_train["annotations"]
 for ann in annotations:
     image_id, caption = ann["image_id"], ann["caption"]
     if image_id not in coco_train_dict:
-        coco_train_dict[image_id] = [caption]
+        coco_train_dict[image_id] = [caption]   
     else:
         coco_train_dict[image_id].append(caption)
 
@@ -74,7 +76,23 @@ for i, key in enumerate(sorted(flickr_dict.keys())):
         "caption": flickr_dict[key]
     }
 
+"""
+# MSR-VTT Dataset
+with open("../ssd/MSR-VTT/msrvtt_test_new.csv") as msrvtt_csv:
+    reader = csv.DictReader(msrvtt_csv, fieldnames=["key", "vid_key", "video_id", "sentence"], skipinitialspace=True)
+    for i, row in enumerate(reader):
+        vid_id, caption = row["video_id"], row["sentence"]
+        msrvtt_dict[vid_id] = caption
+
+for i, key in enumerate(msrvtt_dict.keys()):
+    test_dict[i] = {
+        "dataset": "msr-vtt",
+        "vid_id": key,
+        "caption": msrvtt_dict[key]
+    }
+"""
+
 # Combine train and validation annotations
-annotations = {"train": train_dict, "val": val_dict}
+annotations = {"train": train_dict, "val": val_dict, "test": test_dict}
 with open(config.cocoflickr.annotations, "wb") as pkl:
     pickle.dump(annotations, pkl, pickle.HIGHEST_PROTOCOL)

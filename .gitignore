@@ -4,6 +4,7 @@
 
 # model checkpoint
 save/
+embeddings/*.pt
 *.pt
 
 # tensorboard logdir

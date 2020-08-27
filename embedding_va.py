@@ -14,7 +14,8 @@ from tqdm import tqdm
 from config import config
 from datasets.VGGSound import VGGSound
 from modules.VANet import VANet
-
+from modules.VATNet import VATNet
+"""
 target_classes = ["toilet flushing",
                 "machine gun shooting",
                 "child speech, kid speaking",
@@ -48,7 +49,7 @@ target_classes = ["toilet flushing",
                 "ocean burbling",
                 "splashing water",
                 "duck quacking"]
-
+"""
 if torch.cuda.is_available():
     device = torch.device("cuda")
     print("Using GPU:", torch.cuda.get_device_name())
@@ -58,9 +59,9 @@ print("Current device:", device)
 
 batch_size = 512
 num_workers = 16
-model_path = "../ssd/save/VA_B512_LR1e-04_D1e-05_M0.2_scratch/021.pt"
+model_path = "../ssd/save/VAT_B512_LR1e-04_D1e-05_M0.2_easy/032.pt"
 
-writer = SummaryWriter("../ssd/runs/bin/embedding-v2-021-scratch")
+writer = SummaryWriter("../ssd/runs/bin/emb_vggsound_vat_v1")
 
 vggsound_ = VGGSound(mode="test")
 vggsound_test = DataLoader(vggsound_, batch_size=batch_size, num_workers=num_workers, pin_memory=True)
@@ -68,10 +69,10 @@ vggsound_test = DataLoader(vggsound_, batch_size=batch_size, num_workers=num_wor
 
 def load_model():
     load = torch.load(model_path)
-    model = VANet()
+    model = VATNet()
+    model.load_state_dict(load["weights"])
     model = nn.DataParallel(model)
     model.to(device)
-    model.load_state_dict(load["weights"])
     return model
 
 def generate_embeddings():
@@ -85,7 +86,7 @@ def generate_embeddings():
     for img, aud, class_ in tqdm(vggsound_test):
         with torch.no_grad():
             img, aud = img.to(device), aud.to(device)
-            img_emb, aud_emb = model(img, aud)
+            img_emb, aud_emb = model(img, aud, mode="va")
 
             if img_embs is None:
                 img_embs = img_emb.cpu().clone()
@@ -101,7 +102,7 @@ def generate_embeddings():
 
 if __name__ == "__main__":
     img_embs, aud_embs, classes = generate_embeddings()
-    
+    """
     target_idx = [c in target_classes for c in classes]
     img_embs, aud_embs = img_embs[target_idx], aud_embs[target_idx]
     classes = list(compress(classes, target_idx))
@@ -113,5 +114,5 @@ if __name__ == "__main__":
     img_classes = [c + "(img)" for c in classes]
     aud_classes = [c + "(aud)" for c in classes]
     writer.add_embedding(global_embs, tag="embedding-all-target", metadata=img_classes + aud_classes)
-    
-    torch.save({"img_emb": img_embs, "aud_emb": aud_embs, "class": classes}, "emb.pt")
+    """    
+    torch.save({"img_emb": img_embs, "aud_emb": aud_embs, "class": classes}, "emb_vggsound_vat_v1.pt")

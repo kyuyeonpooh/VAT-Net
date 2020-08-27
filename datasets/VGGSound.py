@@ -2,7 +2,9 @@ import csv
 import os
 import random
 
+import gensim
 import librosa
+import nltk
 import numpy as np
 import torch
 from PIL import Image

@@ -1,6 +1,6 @@
 import torch
 
-bundle = torch.load("emb.pt")
+bundle = torch.load("emb_vggsound_vat_v1.pt")
 (img_embs, aud_embs, classes) = bundle["img_emb"], bundle["aud_emb"], bundle["class"]
 
 

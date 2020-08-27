@@ -27,10 +27,7 @@ def collect_sentences(dataset_ann):
     for split in ["train", "val"]:
         ann = dataset_ann[split]
         for key in ann.keys():
-            if None in ann[key]["caption"]:
-                print(ann[key]["caption"])
-            else:
-                sentences += ann[key]["caption"]
+            sentences += ann[key]["caption"]
     return sentences
 
 
