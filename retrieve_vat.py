@@ -39,7 +39,7 @@ def v2t():
 def t2v():
     x = np.dot(txt_embs, img_embs.T)
     y = np.dot(txt_embs, aud_embs.T)
-    x = 0.9 * x + 0.1 * y
+    x = 0.8 * x + 0.2 * y
     #x = np.dot(txt_embs, img_embs.T)
     compute_metrics(x)
 
